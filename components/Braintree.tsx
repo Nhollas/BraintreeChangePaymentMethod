@@ -4,19 +4,23 @@ import axios from "axios";
 import braintree, { Dropin } from "braintree-web-drop-in";
 
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { UseFormReturn } from "react-hook-form";
+import { formSchema } from "./ChangeCard";
+import { z } from "zod";
+
 export default function Braintree({
   clientToken,
   hideBraintree,
+  form,
 }: {
   clientToken: string;
   hideBraintree: Dispatch<SetStateAction<boolean>>;
+  form: UseFormReturn<z.infer<typeof formSchema>>;
 }) {
   const [dropinInstance, setDropinInstance] = useState<Dropin | undefined>(
     undefined,
   );
   const [requestable, setRequestable] = useState(false);
-
-  const [returnedCard, setReturnedCard] = useState({});
 
   useEffect(() => {
     if (clientToken === undefined) return;
@@ -67,18 +71,12 @@ export default function Braintree({
             deviceData: payload.deviceData,
           };
 
-          const response = await axios.put(
-            "https://zkf2h5-3000.csb.app/api/customer/card",
-            requestBody,
-          );
-
-          setReturnedCard(response.data);
-
-          console.log("response", response);
+          form.setValue("nonce", payload.nonce);
+          form.setValue("deviceData", payload.deviceData || "");
         })
         .catch((error) => console.log(error));
     }
-  }, [requestable]);
+  }, [requestable, form]);
 
   return (
     <section className="w-full h-full">
@@ -99,9 +97,6 @@ export default function Braintree({
       >
         Change Card
       </button> */}
-      <pre className="text-sm mt-6">
-        {JSON.stringify(returnedCard, null, 4)}
-      </pre>
     </section>
   );
 }
