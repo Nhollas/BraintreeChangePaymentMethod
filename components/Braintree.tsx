@@ -1,9 +1,6 @@
-"use client";
-
-import axios from "axios";
 import braintree, { Dropin } from "braintree-web-drop-in";
 
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useRef } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { formSchema } from "./ChangeCard";
 import { z } from "zod";
@@ -17,62 +14,55 @@ export default function Braintree({
   hideBraintree: Dispatch<SetStateAction<boolean>>;
   form: UseFormReturn<z.infer<typeof formSchema>>;
 }) {
-  const [dropinInstance, setDropinInstance] = useState<Dropin | undefined>(
-    undefined,
-  );
-  const [requestable, setRequestable] = useState(0);
+  const dropinInstanceRef = useRef<Dropin | undefined>();
 
   useEffect(() => {
+    const handlePaymentMethodRequestable = () => {
+      if (!dropinInstanceRef.current) return;
+
+      dropinInstanceRef.current
+        .requestPaymentMethod()
+        .then(async (payload) => {
+          console.log("Setting nonce values:", payload);
+          form.setValue("nonce", payload.nonce);
+          form.setValue("deviceData", payload.deviceData || "");
+        })
+        .catch((error) => console.log(error));
+    };
+
+    console.log("We are initializeBraintree");
     async function initializeBraintree() {
       try {
-        if (dropinInstance) {
-          await dropinInstance.teardown();
-          setDropinInstance(undefined);
-        }
-
         const instance = await braintree.create({
           authorization: clientToken,
           container: "#dropin-container",
           dataCollector: true,
         });
 
+        dropinInstanceRef.current = instance;
+
         instance?.on("paymentMethodRequestable", () => {
           console.log("paymentMethodRequestable");
-          setRequestable((prev) => prev + 1);
-        });
 
-        instance?.on("noPaymentMethodRequestable", () => {
-          console.log("noPaymentMethodRequestable");
-          setRequestable(0);
+          handlePaymentMethodRequestable();
         });
-
-        setDropinInstance(instance);
       } catch (error) {}
     }
 
     initializeBraintree();
-  }, []);
 
-  useEffect(() => {
-    console.log("We are going to try and send request");
-    console.log("requestable", requestable);
-    console.log("dropinInstance", dropinInstance);
-    if (requestable !== 0 && dropinInstance) {
-      console.log("Sending request");
-      dropinInstance
-        .requestPaymentMethod()
-        .then(async (payload) => {
-          const requestBody = {
-            nonce: payload.nonce,
-            deviceData: payload.deviceData,
-          };
+    return () => {
+      console.log("Cleanup required on aisle 4");
 
-          form.setValue("nonce", payload.nonce);
-          form.setValue("deviceData", payload.deviceData || "");
-        })
-        .catch((error) => console.log(error));
-    }
-  }, [requestable]);
+      if (dropinInstanceRef.current) {
+        dropinInstanceRef.current.teardown();
+      }
+
+      if (form) {
+        form.reset();
+      }
+    };
+  }, [clientToken, form]);
 
   return (
     <section className="w-full h-full">

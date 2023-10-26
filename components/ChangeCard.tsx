@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import BraintreeNew from "./BraintreeNew";
+import Braintree from "./Braintree";
+import clsx from "clsx";
 
 export const formSchema = z.object({
   nonce: z.string(),
@@ -24,28 +25,27 @@ export default function ChangeCard({ clientToken }: { clientToken: string }) {
 
   const values = form.watch();
 
-  const Submit =(props: any) => {
-    return (
-      <div>
-        {props.children}
-        <button
-          disabled={values.nonce === ""}
-          className="bg-green-600 px-6 py-2 rounded-lg mt-6"
-        >
-          Submit
-        </button>
-      </div>
-    );
-  }
+  console.log("values", values);
 
   return showBraintree ? (
-  <Submit>          
-    <BraintreeNew
+    <>
+      <button
+        disabled={values.nonce === ""}
+        className={clsx(
+          "px-6 py-2 rounded-lg mt-6",
+          values.nonce === ""
+            ? "bg-gray-50 text-black"
+            : "bg-blue-600 text-white",
+        )}
+      >
+        Submit (this is disabled if no nonce)
+      </button>
+      <Braintree
         clientToken={clientToken}
         hideBraintree={setShowBraintree}
         form={form}
       />
-    <Submit />
+    </>
   ) : (
     <button
       onClick={() => setShowBraintree(true)}
