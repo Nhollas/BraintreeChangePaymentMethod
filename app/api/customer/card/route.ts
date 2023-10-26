@@ -1,7 +1,15 @@
+import { NextResponse } from "next/server";
 import braintree from "braintree";
 import { env } from "@/lib/env";
 
-export async function getClientToken(): Promise<string> {
+type ChangeCustomerCard = {
+  nonce: string;
+  deviceData: string;
+};
+
+export async function PUT(request: Request) {
+  const body = (await request.json()) as ChangeCustomerCard;
+
   const gateway = new braintree.BraintreeGateway({
     environment: braintree.Environment.Sandbox,
     merchantId: env.BRAINTREE_MERCHANT_ID,
@@ -9,11 +17,7 @@ export async function getClientToken(): Promise<string> {
     privateKey: env.BRAINTREE_PRIVATE_KEY,
   });
 
-  const response = await gateway.clientToken.generate({
-    customerId: "55425458751",
-  });
+  console.log("Body", body);
 
-  const clientToken = response.clientToken;
-
-  return clientToken;
+  return NextResponse.json({});
 }

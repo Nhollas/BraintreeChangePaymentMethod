@@ -1,8 +1,10 @@
 "use client";
 
+import axios from "axios";
 import braintree from "braintree-web-drop-in";
+import clsx from "clsx";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 export default function Braintree({
   clientAuthorization,
 }: {
@@ -11,11 +13,24 @@ export default function Braintree({
   const dropinRef = useRef(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
 
+  const [paymentInfo, setPaymentInfo] = useState({});
+  const [requestable, setRequestable] = useState(false);
+
   useEffect(() => {
     async function handlePayment(
       createErr: object | null,
       instance?: braintree.Dropin,
     ) {
+      instance?.on("paymentMethodRequestable", () => {
+        console.log("paymentMethodRequestable");
+        setRequestable(true);
+      });
+
+      instance?.on("noPaymentMethodRequestable", () => {
+        console.log("noPaymentMethodRequestable");
+        setRequestable(false);
+      });
+
       buttonRef.current?.addEventListener("click", function () {
         instance?.requestPaymentMethod(
           async function (requestPaymentMethodErr, payload) {
@@ -25,6 +40,18 @@ export default function Braintree({
 
             const { nonce } = payload;
 
+            const requestBody = {
+              nonce: payload.nonce,
+              deviceData: payload.deviceData,
+            };
+
+            const response = await axios.put(
+              "https://zkf2h5-3000.csb.app/api/customer/card",
+              requestBody,
+            );
+
+            console.log("response", response);
+
             console.log(nonce);
             console.log(payload.deviceData);
           },
@@ -33,26 +60,11 @@ export default function Braintree({
     }
 
     async function initializeBraintree() {
-      const instance = braintree.create(
+      braintree.create(
         {
           authorization: clientAuthorization,
           container: dropinRef.current || "#dropin-container",
           dataCollector: true,
-          card: {
-            overrides: {
-              fields: {
-                number: {
-                  placeholder: "Card Number",
-                },
-                cvv: {
-                  placeholder: "CVV",
-                },
-                expirationDate: {
-                  placeholder: "MM/YY",
-                },
-              },
-            },
-          },
         },
         handlePayment,
       );
@@ -62,9 +74,18 @@ export default function Braintree({
   }, [clientAuthorization]);
 
   return (
-    <section>
+    <section className="w-full h-full">
       <div id="dropin-container" ref={dropinRef}></div>
-      <button ref={buttonRef}>Pay</button>
+      <button
+        disabled={!requestable}
+        className={clsx(
+          !requestable && "bg-gray-500",
+          "bg-blue-600 px-6 py-2 rounded-lg mt-6",
+        )}
+        ref={buttonRef}
+      >
+        Change Card
+      </button>
     </section>
   );
 }
