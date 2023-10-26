@@ -1,4 +1,4 @@
-import Braintree from "@/components/Braintree";
+import ChangeCard from "@/components/ChangeCard";
 import { getClientToken } from "@/lib/getClientToken";
 
 export default async function Home() {
@@ -6,7 +6,7 @@ export default async function Home() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <Braintree clientToken={clientToken} />
+      <ChangeCard clientToken={clientToken} />
     </main>
   );
 }

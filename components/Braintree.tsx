@@ -4,8 +4,14 @@ import axios from "axios";
 import braintree from "braintree-web-drop-in";
 import clsx from "clsx";
 
-import { useEffect, useRef, useState } from "react";
-export default function Braintree({ clientToken }: { clientToken: string }) {
+import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
+export default function Braintree({
+  clientToken,
+  hideBraintree,
+}: {
+  clientToken: string;
+  hideBraintree: Dispatch<SetStateAction<boolean>>;
+}) {
   const dropinRef = useRef(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
 
@@ -31,10 +37,12 @@ export default function Braintree({ clientToken }: { clientToken: string }) {
         instance?.requestPaymentMethod(
           async function (requestPaymentMethodErr, payload) {
             if (requestPaymentMethodErr) {
+              console.log("requestPaymentMethodErr", requestPaymentMethodErr);
               return;
             }
 
-            const { nonce } = payload;
+            console.log("nonce", payload.nonce);
+            console.log("deviceData", payload.deviceData);
 
             const requestBody = {
               nonce: payload.nonce,
@@ -49,9 +57,6 @@ export default function Braintree({ clientToken }: { clientToken: string }) {
             setReturnedCard(response.data);
 
             console.log("response", response);
-
-            console.log(nonce);
-            console.log(payload.deviceData);
           },
         );
       });
@@ -73,18 +78,24 @@ export default function Braintree({ clientToken }: { clientToken: string }) {
 
   return (
     <section className="w-full h-full">
+      <button
+        onClick={() => hideBraintree(false)}
+        className="bg-green-600 px-6 py-2 rounded-lg mt-6"
+      >
+        Hide Braintree
+      </button>
+
       <div id="dropin-container" ref={dropinRef}></div>
       <button
-        disabled={!requestable}
+        //disabled={!requestable}
         className={clsx(
-          !requestable && "bg-gray-500",
+          //!requestable && "bg-gray-500",
           "bg-blue-600 px-6 py-2 rounded-lg mt-6",
         )}
         ref={buttonRef}
       >
         Change Card
       </button>
-
       <pre className="text-sm mt-6">
         {JSON.stringify(returnedCard, null, 4)}
       </pre>

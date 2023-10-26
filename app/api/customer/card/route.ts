@@ -28,7 +28,5 @@ export async function PUT(request: Request) {
     },
   });
 
-  console.log("Card", card);
-
   return NextResponse.json(card);
 }
