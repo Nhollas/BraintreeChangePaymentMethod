@@ -5,16 +5,12 @@ import braintree from "braintree-web-drop-in";
 import clsx from "clsx";
 
 import { useEffect, useRef, useState } from "react";
-export default function Braintree({
-  clientAuthorization,
-}: {
-  clientAuthorization: string;
-}) {
+export default function Braintree({ clientToken }: { clientToken: string }) {
   const dropinRef = useRef(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
 
-  const [paymentInfo, setPaymentInfo] = useState({});
   const [requestable, setRequestable] = useState(false);
+  const [returnedCard, setReturnedCard] = useState({});
 
   useEffect(() => {
     async function handlePayment(
@@ -50,6 +46,8 @@ export default function Braintree({
               requestBody,
             );
 
+            setReturnedCard(response.data);
+
             console.log("response", response);
 
             console.log(nonce);
@@ -62,7 +60,7 @@ export default function Braintree({
     async function initializeBraintree() {
       braintree.create(
         {
-          authorization: clientAuthorization,
+          authorization: clientToken,
           container: dropinRef.current || "#dropin-container",
           dataCollector: true,
         },
@@ -71,7 +69,7 @@ export default function Braintree({
     }
 
     initializeBraintree();
-  }, [clientAuthorization]);
+  }, [clientToken]);
 
   return (
     <section className="w-full h-full">
@@ -86,6 +84,10 @@ export default function Braintree({
       >
         Change Card
       </button>
+
+      <pre className="text-sm mt-6">
+        {JSON.stringify(returnedCard, null, 4)}
+      </pre>
     </section>
   );
 }

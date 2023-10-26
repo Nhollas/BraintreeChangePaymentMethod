@@ -19,5 +19,16 @@ export async function PUT(request: Request) {
 
   console.log("Body", body);
 
-  return NextResponse.json({});
+  const card = await gateway.paymentMethod.create({
+    customerId: env.BRAINTREE_CUSTOMER_ID,
+    paymentMethodNonce: body.nonce,
+    deviceData: body.deviceData,
+    options: {
+      makeDefault: true,
+    },
+  });
+
+  console.log("Card", card);
+
+  return NextResponse.json(card);
 }

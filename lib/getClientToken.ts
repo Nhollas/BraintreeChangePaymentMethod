@@ -10,7 +10,7 @@ export async function getClientToken(): Promise<string> {
   });
 
   const response = await gateway.clientToken.generate({
-    customerId: "55425458751",
+    customerId: env.BRAINTREE_CUSTOMER_ID,
   });
 
   const clientToken = response.clientToken;
