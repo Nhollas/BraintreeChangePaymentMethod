@@ -1,14 +1,13 @@
 "use client";
 
-import axios from "axios";
 import braintree, { Dropin } from "braintree-web-drop-in";
 
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useState, useRef } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { formSchema } from "./ChangeCard";
 import { z } from "zod";
 
-export default function Braintree({
+export default function BraintreeNew({
   clientToken,
   hideBraintree,
   form,
@@ -17,17 +16,17 @@ export default function Braintree({
   hideBraintree: Dispatch<SetStateAction<boolean>>;
   form: UseFormReturn<z.infer<typeof formSchema>>;
 }) {
-  const [dropinInstance, setDropinInstance] = useState<Dropin | undefined>(
-    undefined,
-  );
   const [requestable, setRequestable] = useState(0);
+  const dropinInstanceRef = useRef<Dropin | undefined>();
 
   useEffect(() => {
+    console.log("We are initializeBraintree", clientToken);
     async function initializeBraintree() {
       try {
-        if (dropinInstance) {
-          await dropinInstance.teardown();
-          setDropinInstance(undefined);
+        console.log("dropinInstanceRef", dropinInstanceRef.current);
+        if (dropinInstanceRef.current) {
+          await dropinInstanceRef.current.teardown();
+          dropinInstanceRef.current = undefined;
         }
 
         const instance = await braintree.create({
@@ -36,43 +35,66 @@ export default function Braintree({
           dataCollector: true,
         });
 
+        console.log("instance", instance);
+
+        const handlePaymentMethodRequestable = () => {
+          setRequestable((prevCount) => prevCount + 1);
+        };
+
+        const handleNoPaymentMethodRequestable = () => {
+          setRequestable(0);
+        };
+
+        instance.on("paymentOptionSelected", () => {
+          console.log("paymentOptionSelected");
+        });
+
         instance?.on("paymentMethodRequestable", () => {
           console.log("paymentMethodRequestable");
-          setRequestable((prev) => prev + 1);
+
+          handlePaymentMethodRequestable();
         });
 
         instance?.on("noPaymentMethodRequestable", () => {
           console.log("noPaymentMethodRequestable");
-          setRequestable(0);
+
+          handleNoPaymentMethodRequestable();
         });
 
-        setDropinInstance(instance);
+        dropinInstanceRef.current = instance;
       } catch (error) {}
     }
 
     initializeBraintree();
-  }, []);
+
+    return () => {
+      if (dropinInstanceRef.current) {
+        dropinInstanceRef.current.teardown();
+      }
+    };
+  }, [clientToken]);
 
   useEffect(() => {
-    console.log("We are going to try and send request");
     console.log("requestable", requestable);
-    console.log("dropinInstance", dropinInstance);
-    if (requestable !== 0 && dropinInstance) {
-      console.log("Sending request");
-      dropinInstance
+    console.log("dropinInstance", dropinInstanceRef.current);
+    if (requestable !== 0 && dropinInstanceRef.current) {
+      dropinInstanceRef.current
         .requestPaymentMethod()
         .then(async (payload) => {
-          const requestBody = {
-            nonce: payload.nonce,
-            deviceData: payload.deviceData,
-          };
+          console.log("Setting nonce values:", payload);
 
           form.setValue("nonce", payload.nonce);
           form.setValue("deviceData", payload.deviceData || "");
         })
         .catch((error) => console.log(error));
     }
-  }, [requestable]);
+
+    return () => {
+      if (form) {
+        form.reset();
+      }
+    };
+  }, [requestable, form]);
 
   return (
     <section className="w-full h-full">
