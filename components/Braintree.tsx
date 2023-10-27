@@ -1,5 +1,4 @@
 import braintree from "braintree-web-drop-in";
-
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { formSchema } from "./ChangeCard";
@@ -88,6 +87,8 @@ export default function Braintree({
           dataCollector: true,
         })
         .then((instance) => {
+          console.log("Bofa, we are in the braintree.then callback");
+
           instance.on(
             "paymentMethodRequestable",
             handlePaymentMethodRequestableEvent
@@ -104,10 +105,11 @@ export default function Braintree({
 
     return () => {
       console.log("Cleanup required on aisle 4");
-
       if (dropinInstance.current) {
         dropinInstance.current.teardown();
       }
+
+      console.log("We are going to reset the form");
 
       form.reset();
     };
