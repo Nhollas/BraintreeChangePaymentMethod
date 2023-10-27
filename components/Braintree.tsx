@@ -1,7 +1,7 @@
-import braintree, { Dropin } from "braintree-web-drop-in";
+import braintree from "braintree-web-drop-in";
 
-import { Dispatch, SetStateAction, useEffect, useRef } from "react";
-import { UseFormReturn } from "react-hook-form";
+import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
+import { UseFormReturn, set } from "react-hook-form";
 import { formSchema } from "./ChangeCard";
 import { z } from "zod";
 
@@ -14,39 +14,71 @@ export default function Braintree({
   hideBraintree: Dispatch<SetStateAction<boolean>>;
   form: UseFormReturn<z.infer<typeof formSchema>>;
 }) {
-  const dropinInstanceRef = useRef<Dropin | undefined>();
+  const [isDomLoaded, setIsDomLoaded] = useState(false);
 
   useEffect(() => {
-    const handlePaymentMethodRequestable = () => {
-      if (!dropinInstanceRef.current) return;
+    setIsDomLoaded(true);
+  }, []);
 
-      dropinInstanceRef.current
-        .requestPaymentMethod()
-        .then(async (payload) => {
-          console.log("Setting nonce values:", payload);
+  useEffect(() => {
+    if (!isDomLoaded) {
+      return;
+    }
+
+    let dropinInstance: braintree.Dropin | undefined;
+
+    const handlePaymentMethodRequestable = async (
+      instance: braintree.Dropin
+    ) => {
+      console.log("We are in handlePaymentMethodRequestable", instance);
+
+      try {
+        const payload = await instance.requestPaymentMethod();
+        console.log("Setting nonce values:", payload);
+
+        if (
+          form.getValues("nonce") === payload.nonce &&
+          form.getValues("deviceData") === payload.deviceData
+        ) {
+          console.log("Nonce is the same, skipping");
+        } else {
           form.setValue("nonce", payload.nonce);
           form.setValue("deviceData", payload.deviceData || "");
-        })
-        .catch((error) => console.log(error));
+        }
+      } catch (error) {
+        console.log("Error with requestPaymentMethod:", error);
+
+        setTimeout(handleDropinInstance, 1000, instance);
+      }
     };
 
-    console.log("We are initializeBraintree");
+    async function handleDropinInstance(instance: braintree.Dropin) {
+      console.log("We are in handleDropinInstance");
+
+      if (instance.isPaymentMethodRequestable()) {
+        handlePaymentMethodRequestable(instance);
+      }
+
+      instance.on("paymentMethodRequestable", () => {
+        console.log("paymentMethodRequestable");
+
+        handlePaymentMethodRequestable(instance);
+      });
+
+      dropinInstance = instance;
+    }
+
     async function initializeBraintree() {
-      try {
-        const instance = await braintree.create({
+      console.log("We are initializeBraintree");
+
+      braintree
+        .create({
           authorization: clientToken,
           container: "#dropin-container",
           dataCollector: true,
-        });
-
-        dropinInstanceRef.current = instance;
-
-        instance?.on("paymentMethodRequestable", () => {
-          console.log("paymentMethodRequestable");
-
-          handlePaymentMethodRequestable();
-        });
-      } catch (error) {}
+        })
+        .then(handleDropinInstance)
+        .catch((error) => console.log("initializeBraintree", error));
     }
 
     initializeBraintree();
@@ -54,15 +86,13 @@ export default function Braintree({
     return () => {
       console.log("Cleanup required on aisle 4");
 
-      if (dropinInstanceRef.current) {
-        dropinInstanceRef.current.teardown();
+      if (dropinInstance) {
+        dropinInstance?.teardown();
       }
 
-      if (form) {
-        form.reset();
-      }
+      form.reset();
     };
-  }, [clientToken, form]);
+  }, [clientToken, form, isDomLoaded]);
 
   return (
     <section className="w-full h-full">
