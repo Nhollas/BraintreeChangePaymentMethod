@@ -13,7 +13,7 @@ test("If we have a requestable payment method, then we should try to request a p
 
   expect(
     screen.getByRole("button", {
-      name: "Submit (this is disabled if no nonce)",
+      name: "Submit",
     })
   ).toBeDisabled();
 
@@ -23,10 +23,11 @@ test("If we have a requestable payment method, then we should try to request a p
   await waitFor(() => {
     expect(mockedDropIn.create).toHaveBeenCalled();
     expect(mockedInstance.requestPaymentMethod).toHaveBeenCalled();
-    expect(
-      screen.getByRole("button", {
-        name: "Submit (this is disabled if no nonce)",
-      })
-    ).toBeEnabled();
   });
+
+  expect(
+    screen.getByRole("button", {
+      name: "Submit",
+    })
+  ).toBeEnabled();
 });

@@ -30,13 +30,11 @@ export default function ChangeCard({ clientToken }: { clientToken: string }) {
       <button
         disabled={values.nonce === ""}
         className={clsx(
-          "px-6 py-2 rounded-lg mt-6",
-          values.nonce === ""
-            ? "bg-gray-50 text-black"
-            : "bg-blue-600 text-white"
+          "px-6 py-2 rounded-lg mt-6 text-white",
+          values.nonce === "" ? "bg-red-600" : "bg-green-600"
         )}
       >
-        Submit (this is disabled if no nonce)
+        Submit
       </button>
       <Braintree
         clientToken={clientToken}
