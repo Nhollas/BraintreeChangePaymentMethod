@@ -1,26 +1,25 @@
 import braintree from "braintree-web-drop-in";
-import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { UseFormReturn } from "react-hook-form";
-import { formSchema } from "./ChangeCard";
 import { z } from "zod";
+
+const formSchema = z.object({
+  nonce: z.string(),
+  deviceData: z.string().optional(),
+});
 
 type BraintreeProps = {
   clientToken: string;
-  closeBraintree: Dispatch<SetStateAction<boolean>>;
   form: UseFormReturn<z.infer<typeof formSchema>>;
 };
 
-export default function Braintree({
-  clientToken,
-  closeBraintree,
-  form,
-}: BraintreeProps) {
+export default function Braintree({ clientToken, form }: BraintreeProps) {
   const [isDomLoaded, setIsDomLoaded] = useState(false);
 
   const dropinInstance = useRef<braintree.Dropin | undefined>(undefined);
 
   useEffect(() => {
-    /* 
+    /*
       This delay is required to ensure that the DOM is
       loaded before we try to initialize Braintree.
     */
@@ -39,53 +38,50 @@ export default function Braintree({
 
       try {
         const payload = await dropinInstance.current.requestPaymentMethod();
-        const { nonce, deviceData } = payload;
-        const currentNonce = form.getValues("nonce");
-        const currentDeviceData = form.getValues("deviceData");
+        const isPayloadSameAsCurrent = (
+          payload: braintree.PaymentMethodPayload,
+          form: UseFormReturn<any>
+        ) => {
+          const { nonce, deviceData } = payload;
+          const currentNonce = form.getValues("nonce");
+          const currentDeviceData = form.getValues("deviceData");
 
-        console.log("Payload", payload);
+          return currentNonce === nonce && currentDeviceData === deviceData;
+        };
 
-        console.log("currentNonce", currentNonce);
-        console.log("currentDeviceData", currentDeviceData);
-
-        if (currentNonce === nonce && currentDeviceData === deviceData) {
-          // Nothing happens
-        } else {
-          form.setValue("nonce", nonce);
-          form.setValue("deviceData", deviceData);
+        if (!isPayloadSameAsCurrent(payload, form)) {
+          form.setValue("nonce", payload.nonce);
+          form.setValue("deviceData", payload.deviceData);
         }
-      } catch (error) {}
-    }
-
-    async function setupInitialPaymentMethod() {
-      if (dropinInstance.current?.isPaymentMethodRequestable()) {
-        handlePaymentMethodRequestable();
+      } catch (error) {
+        // Ignoring these isn't ideal
       }
     }
 
-    function handlePaymentMethodRequestableEvent() {
-      console.log("We have answered the phone");
-
-      handlePaymentMethodRequestable();
-    }
-
     async function initializeBraintree() {
+      if (dropinInstance.current) {
+        dropinInstance.current.teardown();
+      }
+
       braintree
         .create({
           authorization: clientToken,
           container: "#dropin-container",
           dataCollector: true,
-          vaultManager: false,
         })
         .then((instance) => {
-          instance.on(
-            "paymentMethodRequestable",
-            handlePaymentMethodRequestableEvent,
-          );
-
           dropinInstance.current = instance;
 
-          setupInitialPaymentMethod();
+          // Subscribe to any future paymentMethodRequestable events.
+          instance.on(
+            "paymentMethodRequestable",
+            handlePaymentMethodRequestable
+          );
+
+          // If we already have a vaulted payment method, we should request it.
+          if (instance.isPaymentMethodRequestable()) {
+            handlePaymentMethodRequestable();
+          }
         })
         .catch((error) => console.error("initializeBraintree", error));
     }
@@ -101,16 +97,5 @@ export default function Braintree({
     };
   }, [clientToken, form, isDomLoaded]);
 
-  return (
-    <section className="w-full h-full">
-      <button
-        onClick={() => closeBraintree(false)}
-        className="bg-green-600 px-6 py-2 rounded-lg mt-6"
-      >
-        Close Braintree
-      </button>
-
-      <div id="dropin-container"></div>
-    </section>
-  );
+  return <div id="dropin-container"></div>;
 }
