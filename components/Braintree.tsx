@@ -1,7 +1,7 @@
 import braintree from "braintree-web-drop-in";
 
-import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
-import { UseFormReturn, set } from "react-hook-form";
+import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { UseFormReturn } from "react-hook-form";
 import { formSchema } from "./ChangeCard";
 import { z } from "zod";
 
@@ -17,6 +17,10 @@ export default function Braintree({
   const [isDomLoaded, setIsDomLoaded] = useState(false);
 
   useEffect(() => {
+    /* 
+      This delay is required to ensure that the DOM is
+      loaded before we try to initialize Braintree.
+    */
     setIsDomLoaded(true);
   }, []);
 
