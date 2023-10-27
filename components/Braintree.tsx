@@ -7,13 +7,13 @@ import { z } from "zod";
 
 type BraintreeProps = {
   clientToken: string;
-  hideBraintree: Dispatch<SetStateAction<boolean>>;
+  closeBraintree: Dispatch<SetStateAction<boolean>>;
   form: UseFormReturn<z.infer<typeof formSchema>>;
 };
 
 export default function Braintree({
   clientToken,
-  hideBraintree,
+  closeBraintree,
   form,
 }: BraintreeProps) {
   const [isDomLoaded, setIsDomLoaded] = useState(false);
@@ -116,10 +116,10 @@ export default function Braintree({
   return (
     <section className="w-full h-full">
       <button
-        onClick={() => hideBraintree(false)}
+        onClick={() => closeBraintree(false)}
         className="bg-green-600 px-6 py-2 rounded-lg mt-6"
       >
-        Hide Braintree
+        Close Braintree
       </button>
 
       <div id="dropin-container"></div>

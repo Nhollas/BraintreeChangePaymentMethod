@@ -42,7 +42,7 @@ export default function ChangeCard({ clientToken }: { clientToken: string }) {
       </button>
       <Braintree
         clientToken={clientToken}
-        hideBraintree={setShowBraintree}
+        closeBraintree={setShowBraintree}
         form={form}
       />
     </>
