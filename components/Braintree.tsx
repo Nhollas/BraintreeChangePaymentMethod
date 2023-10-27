@@ -1,5 +1,5 @@
 import braintree from "braintree-web-drop-in";
-import { useEffect, useRef, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 
@@ -11,9 +11,14 @@ const formSchema = z.object({
 type BraintreeProps = {
   clientToken: string;
   form: UseFormReturn<z.infer<typeof formSchema>>;
+  closeBraintree: Dispatch<SetStateAction<boolean>>;
 };
 
-export default function Braintree({ clientToken, form }: BraintreeProps) {
+export default function Braintree({
+  clientToken,
+  form,
+  closeBraintree,
+}: BraintreeProps) {
   const [isDomLoaded, setIsDomLoaded] = useState(false);
 
   const dropinInstance = useRef<braintree.Dropin | undefined>(undefined);
@@ -38,24 +43,10 @@ export default function Braintree({ clientToken, form }: BraintreeProps) {
 
       try {
         const payload = await dropinInstance.current.requestPaymentMethod();
-        const isPayloadSameAsCurrent = (
-          payload: braintree.PaymentMethodPayload,
-          form: UseFormReturn<any>
-        ) => {
-          const { nonce, deviceData } = payload;
-          const currentNonce = form.getValues("nonce");
-          const currentDeviceData = form.getValues("deviceData");
 
-          return currentNonce === nonce && currentDeviceData === deviceData;
-        };
-
-        if (!isPayloadSameAsCurrent(payload, form)) {
-          form.setValue("nonce", payload.nonce);
-          form.setValue("deviceData", payload.deviceData);
-        }
-      } catch (error) {
-        // Ignoring these isn't ideal
-      }
+        form.setValue("nonce", payload.nonce);
+        form.setValue("deviceData", payload.deviceData);
+      } catch (error) {}
     }
 
     async function initializeBraintree() {
@@ -97,5 +88,15 @@ export default function Braintree({ clientToken, form }: BraintreeProps) {
     };
   }, [clientToken, form, isDomLoaded]);
 
-  return <div id="dropin-container"></div>;
+  return (
+    <section className="w-full h-full">
+      <button
+        onClick={() => closeBraintree(false)}
+        className="bg-green-600 px-6 py-2 rounded-lg mt-6"
+      >
+        Close Braintree
+      </button>
+      <div id="dropin-container"></div>
+    </section>
+  );
 }
