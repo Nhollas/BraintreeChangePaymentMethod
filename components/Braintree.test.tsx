@@ -1,5 +1,5 @@
 import React from "react";
-import { render, waitFor } from "@testing-library/react";
+import { render, waitFor, act } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import Braintree from "./Braintree";
 import dropIn, { Dropin } from "braintree-web-drop-in";
@@ -46,7 +46,7 @@ describe("When the Braintree DropIn UI loads", () => {
         clientToken="mockClientToken"
         form={form}
         closeBraintree={closeBraintree}
-      />
+      />,
     );
 
     await waitFor(() => {
@@ -67,7 +67,7 @@ describe("When the Braintree DropIn UI loads", () => {
         clientToken="mockClientToken"
         form={form}
         closeBraintree={closeBraintree}
-      />
+      />,
     );
 
     await waitFor(() => {
@@ -87,7 +87,7 @@ describe("When the Braintree DropIn UI loads", () => {
         clientToken="mockClientToken"
         form={form}
         closeBraintree={closeBraintree}
-      />
+      />,
     );
 
     await waitFor(() => {
@@ -110,7 +110,7 @@ describe("When the Braintree DropIn UI loads", () => {
         clientToken="mockClientToken"
         form={form}
         closeBraintree={closeBraintree}
-      />
+      />,
     );
 
     await waitFor(() => {
@@ -119,5 +119,49 @@ describe("When the Braintree DropIn UI loads", () => {
 
     expect(form.setValue).not.toHaveBeenCalled();
     expect(form.getValues).not.toHaveBeenCalled();
+    expect(mockDropIn.requestPaymentMethod).not.toHaveBeenCalled();
+  });
+
+  test("We send events", async () => {
+    const onPaymentMethodRequestableFunc = jest
+      .fn()
+      .mockName("onPaymentMethodRequestableFunc");
+
+    mockDropIn.on = onPaymentMethodRequestableFunc;
+    mockDropIn.isPaymentMethodRequestable = jest.fn().mockReturnValue(false);
+    // Override the getValues function to return something different.
+    form.getValues = jest.fn().mockReturnValueOnce("").mockReturnValueOnce("");
+
+    jest.spyOn(dropIn, "create").mockResolvedValue(mockDropIn);
+
+    render(
+      <Braintree
+        clientToken="mockClientToken"
+        form={form}
+        closeBraintree={closeBraintree}
+      />,
+    );
+
+    await waitFor(() => onPaymentMethodRequestableFunc.mock.calls.length === 2);
+
+    const triggerEvent = onPaymentMethodRequestableFunc.mock.calls[0][1];
+
+    act(() => {
+      triggerEvent();
+    });
+
+    await waitFor(() => {
+      expect(form.getValues).toHaveBeenCalledWith("nonce");
+      expect(form.getValues).toHaveBeenCalledWith("deviceData");
+
+      expect(form.getValues).toHaveBeenCalledTimes(2);
+
+      expect(form.setValue).toHaveBeenCalledWith("nonce", "mockNonce");
+      expect(form.setValue).toHaveBeenCalledWith(
+        "deviceData",
+        "mockDeviceData",
+      );
+      expect(form.setValue).toHaveBeenCalledTimes(2);
+    });
   });
 });

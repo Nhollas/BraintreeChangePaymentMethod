@@ -33,11 +33,6 @@ export default function Braintree({
     }
 
     async function handlePaymentMethodRequestable() {
-      console.log(
-        "We are in handlePaymentMethodRequestable",
-        dropinInstance.current
-      );
-
       if (!dropinInstance.current) {
         return;
       }
@@ -48,38 +43,33 @@ export default function Braintree({
         const currentNonce = form.getValues("nonce");
         const currentDeviceData = form.getValues("deviceData");
 
-        if (currentNonce === nonce && currentDeviceData === deviceData) {
-          console.log(
-            "Nonce is the same, skipping. Don't want to cause a pointless re-render"
-          );
-        } else {
-          console.log("Setting nonce values:", payload);
+        console.log("Payload", payload);
 
+        console.log("currentNonce", currentNonce);
+        console.log("currentDeviceData", currentDeviceData);
+
+        if (currentNonce === nonce && currentDeviceData === deviceData) {
+          // Nothing happens
+        } else {
           form.setValue("nonce", nonce);
           form.setValue("deviceData", deviceData);
         }
-      } catch (error) {
-        console.error("Error with requestPaymentMethod:", error);
-      }
+      } catch (error) {}
     }
 
     async function setupInitialPaymentMethod() {
-      console.log("We are in handleDropinInstance");
-
       if (dropinInstance.current?.isPaymentMethodRequestable()) {
         handlePaymentMethodRequestable();
       }
     }
 
     function handlePaymentMethodRequestableEvent() {
-      console.log("paymentMethodRequestable");
+      console.log("We have answered the phone");
 
       handlePaymentMethodRequestable();
     }
 
     async function initializeBraintree() {
-      console.log("We are initializeBraintree");
-
       braintree
         .create({
           authorization: clientToken,
@@ -90,7 +80,7 @@ export default function Braintree({
         .then((instance) => {
           instance.on(
             "paymentMethodRequestable",
-            handlePaymentMethodRequestableEvent
+            handlePaymentMethodRequestableEvent,
           );
 
           dropinInstance.current = instance;
@@ -103,7 +93,6 @@ export default function Braintree({
     initializeBraintree();
 
     return () => {
-      console.log("Cleanup required on aisle 4");
       if (dropinInstance.current) {
         dropinInstance.current.teardown();
       }
