@@ -99,4 +99,25 @@ describe("When the Braintree DropIn UI loads", () => {
     expect(mockDropIn.teardown).toHaveBeenCalled();
     expect(form.reset).toHaveBeenCalled();
   });
+
+  test("When we cannot don't have a payment method, we should not try to set payment information", async () => {
+    mockDropIn.isPaymentMethodRequestable = jest.fn().mockReturnValue(false);
+
+    jest.spyOn(dropIn, "create").mockResolvedValue(mockDropIn);
+
+    render(
+      <Braintree
+        clientToken="mockClientToken"
+        form={form}
+        closeBraintree={closeBraintree}
+      />
+    );
+
+    await waitFor(() => {
+      expect(dropIn.create).toHaveBeenCalled();
+    });
+
+    expect(form.setValue).not.toHaveBeenCalled();
+    expect(form.getValues).not.toHaveBeenCalled();
+  });
 });
