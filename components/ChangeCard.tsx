@@ -9,7 +9,7 @@ import clsx from "clsx";
 
 export const formSchema = z.object({
   nonce: z.string(),
-  deviceData: z.string(),
+  deviceData: z.string().optional(),
 });
 
 export default function ChangeCard({ clientToken }: { clientToken: string }) {

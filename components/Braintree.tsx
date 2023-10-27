@@ -1,20 +1,24 @@
 import braintree from "braintree-web-drop-in";
 
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { formSchema } from "./ChangeCard";
 import { z } from "zod";
+
+type BraintreeProps = {
+  clientToken: string;
+  hideBraintree: Dispatch<SetStateAction<boolean>>;
+  form: UseFormReturn<z.infer<typeof formSchema>>;
+};
 
 export default function Braintree({
   clientToken,
   hideBraintree,
   form,
-}: {
-  clientToken: string;
-  hideBraintree: Dispatch<SetStateAction<boolean>>;
-  form: UseFormReturn<z.infer<typeof formSchema>>;
-}) {
+}: BraintreeProps) {
   const [isDomLoaded, setIsDomLoaded] = useState(false);
+
+  const dropinInstance = useRef<braintree.Dropin | undefined>(undefined);
 
   useEffect(() => {
     /* 
@@ -29,47 +33,49 @@ export default function Braintree({
       return;
     }
 
-    let dropinInstance: braintree.Dropin | undefined;
+    async function handlePaymentMethodRequestable() {
+      console.log(
+        "We are in handlePaymentMethodRequestable",
+        dropinInstance.current
+      );
 
-    const handlePaymentMethodRequestable = async (
-      instance: braintree.Dropin
-    ) => {
-      console.log("We are in handlePaymentMethodRequestable", instance);
+      if (!dropinInstance.current) {
+        return;
+      }
 
       try {
-        const payload = await instance.requestPaymentMethod();
-        console.log("Setting nonce values:", payload);
+        const payload = await dropinInstance.current.requestPaymentMethod();
+        const { nonce, deviceData } = payload;
+        const currentNonce = form.getValues("nonce");
+        const currentDeviceData = form.getValues("deviceData");
 
-        if (
-          form.getValues("nonce") === payload.nonce &&
-          form.getValues("deviceData") === payload.deviceData
-        ) {
-          console.log("Nonce is the same, skipping");
+        if (currentNonce === nonce && currentDeviceData === deviceData) {
+          console.log(
+            "Nonce is the same, skipping. Don't want to cause a pointless re-render"
+          );
         } else {
-          form.setValue("nonce", payload.nonce);
-          form.setValue("deviceData", payload.deviceData || "");
+          console.log("Setting nonce values:", payload);
+
+          form.setValue("nonce", nonce);
+          form.setValue("deviceData", deviceData);
         }
       } catch (error) {
-        console.log("Error with requestPaymentMethod:", error);
-
-        setTimeout(handleDropinInstance, 1000, instance);
+        console.error("Error with requestPaymentMethod:", error);
       }
-    };
+    }
 
-    async function handleDropinInstance(instance: braintree.Dropin) {
+    async function setupInitialPaymentMethod() {
       console.log("We are in handleDropinInstance");
 
-      if (instance.isPaymentMethodRequestable()) {
-        handlePaymentMethodRequestable(instance);
+      if (dropinInstance.current?.isPaymentMethodRequestable()) {
+        handlePaymentMethodRequestable();
       }
+    }
 
-      instance.on("paymentMethodRequestable", () => {
-        console.log("paymentMethodRequestable");
+    function handlePaymentMethodRequestableEvent() {
+      console.log("paymentMethodRequestable");
 
-        handlePaymentMethodRequestable(instance);
-      });
-
-      dropinInstance = instance;
+      handlePaymentMethodRequestable();
     }
 
     async function initializeBraintree() {
@@ -81,8 +87,17 @@ export default function Braintree({
           container: "#dropin-container",
           dataCollector: true,
         })
-        .then(handleDropinInstance)
-        .catch((error) => console.log("initializeBraintree", error));
+        .then((instance) => {
+          instance.on(
+            "paymentMethodRequestable",
+            handlePaymentMethodRequestableEvent
+          );
+
+          dropinInstance.current = instance;
+
+          setupInitialPaymentMethod();
+        })
+        .catch((error) => console.error("initializeBraintree", error));
     }
 
     initializeBraintree();
@@ -90,8 +105,8 @@ export default function Braintree({
     return () => {
       console.log("Cleanup required on aisle 4");
 
-      if (dropinInstance) {
-        dropinInstance?.teardown();
+      if (dropinInstance.current) {
+        dropinInstance.current.teardown();
       }
 
       form.reset();
