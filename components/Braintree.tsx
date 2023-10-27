@@ -35,7 +35,7 @@ export default function Braintree({
     async function handlePaymentMethodRequestable() {
       console.log(
         "We are in handlePaymentMethodRequestable",
-        dropinInstance.current
+        dropinInstance.current,
       );
 
       if (!dropinInstance.current) {
@@ -50,7 +50,7 @@ export default function Braintree({
 
         if (currentNonce === nonce && currentDeviceData === deviceData) {
           console.log(
-            "Nonce is the same, skipping. Don't want to cause a pointless re-render"
+            "Nonce is the same, skipping. Don't want to cause a pointless re-render",
           );
         } else {
           console.log("Setting nonce values:", payload);
@@ -85,11 +85,12 @@ export default function Braintree({
           authorization: clientToken,
           container: "#dropin-container",
           dataCollector: true,
+          vaultManager: true,
         })
         .then((instance) => {
           instance.on(
             "paymentMethodRequestable",
-            handlePaymentMethodRequestableEvent
+            handlePaymentMethodRequestableEvent,
           );
 
           dropinInstance.current = instance;
