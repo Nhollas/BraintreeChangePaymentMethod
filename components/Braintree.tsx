@@ -87,8 +87,6 @@ export default function Braintree({
           dataCollector: true,
         })
         .then((instance) => {
-          console.log("Bofa, we are in the braintree.then callback");
-
           instance.on(
             "paymentMethodRequestable",
             handlePaymentMethodRequestableEvent
@@ -108,8 +106,6 @@ export default function Braintree({
       if (dropinInstance.current) {
         dropinInstance.current.teardown();
       }
-
-      console.log("We are going to reset the form");
 
       form.reset();
     };
